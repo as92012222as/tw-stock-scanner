@@ -14,7 +14,7 @@ def get_all_tickers():
     # 等測試成功後，你可以把 [:300] 拿掉，改成跑全市場
     valid_tickers = [f"{code}.TW" for code in listed if len(code) == 4 and code[:2] in ['11', '12', '13', '14', '15', '16', '17', '23', '24', '26', '28', '29', '30', '37', '49', '52', '55', '58', '60', '61', '62', '64', '65', '66', '80', '81', '82', '83', '84', '99']]
     
-    return valid_tickers[:300]
+    return valid_tickers[]
 
 def scan_market():
     tickers = get_all_tickers()
@@ -84,3 +84,4 @@ def scan_market():
 
 if __name__ == "__main__":
     scan_market()
+
