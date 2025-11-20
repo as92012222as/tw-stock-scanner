@@ -18,7 +18,7 @@ def get_all_tickers():
 
 def scan_market():
     tickers = get_all_tickers()
-    breakout_list = []
+    breakout_list = [1000]
     
     print(f"開始掃描 {len(tickers)} 檔股票...")
     
@@ -84,4 +84,5 @@ def scan_market():
 
 if __name__ == "__main__":
     scan_market()
+
 
