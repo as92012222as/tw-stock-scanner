@@ -10,7 +10,7 @@ def get_all_tickers():
     
     # 篩選條件：長度為 4 的代號 (排除權證等)
     # 為避免 GitHub Actions 超時，我們跑前 300 檔熱門股做測試
-    valid_tickers = [f"{code}.TW" for code in listed if len(code) == 4 []
+    valid_tickers = [f"{code}.TW" for code in listed if len(code) == 4]
     
     # 如果要跑全市場，請將 [:300] 刪除
     # return [f"{code}.TW" for code in listed if len(code) == 4]
@@ -113,5 +113,6 @@ def scan_market():
 
 if __name__ == "__main__":
     scan_market()
+
 
 
