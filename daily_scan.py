@@ -43,7 +43,7 @@ def scan_market():
             # --- 2. 判斷多重條件 ---
             
             # 輔助濾網：成交量 > 1000 張
-            cond_volume = today['Volume'] > 1000000 
+            cond_volume = today['Volume'] > 500000 
             
             # A. 條件一：站上MA5，且已在MA10及MA20之上 (短線轉強，中長線確立)
             is_c1 = (today['Close'] > today['MA5']) & \
@@ -113,6 +113,7 @@ def scan_market():
 
 if __name__ == "__main__":
     scan_market()
+
 
 
 
