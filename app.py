@@ -50,6 +50,7 @@ if os.path.exists(csv_file):
                 use_container_width=True,
                 hide_index=True,
                 column_config={
+                    "資料日期": st.column_config.TextColumn("📅 日期"),
                     "代號": st.column_config.TextColumn("代號", help="股票代碼"),
                     "名稱": st.column_config.TextColumn("名稱"),
                     "觸發條件": st.column_config.TextColumn("🚀 觸發訊號", width="medium"),
@@ -81,3 +82,4 @@ if os.path.exists(csv_file):
 else:
     st.info("⏳ 尚未產生掃描結果。")
     st.write("請等待下午自動排程執行 (約 14:30)，或前往 GitHub Actions 手動觸發。")
+
