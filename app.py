@@ -12,7 +12,7 @@ st.caption("資料來源: GitHub Actions 自動掃描 | 策略: 多重均線共�
 
 csv_file = 'result.csv'
 
-# 手動重新整理按鈕 (放在右上角更整潔)
+# 手動重新整理按鈕
 if st.button("🔄 重新讀取資料"):
     st.rerun()
 
@@ -31,18 +31,21 @@ if os.path.exists(csv_file):
             st.sidebar.write(f"最後更新: {mod_time}")
             st.sidebar.metric("今日符合檔數", f"{len(df)} 檔")
             
-            # 1. 策略篩選器 (如果有 '觸發條件' 欄位)
+            # 1. 策略篩選器
             if '觸發條件' in df.columns:
-                # 找出所有的策略種類
-                all_strategies = ['全部顯示'] + sorted(df['觸發條件'].unique().tolist())
+                all_strategies = ['全部顯示'] + sorted(df['觸發條件'].astype(str).unique().tolist())
                 selected_strategy = st.sidebar.selectbox("選擇觸發策略", all_strategies)
                 
-                # 進行篩選
                 if selected_strategy != '全部顯示':
                     df = df[df['觸發條件'] == selected_strategy]
             
-            # 2. 顯示主表格 (使用 column_config 做美化)
+            # 2. 顯示主表格
             st.subheader(f"📋 篩選結果 ({len(df)} 筆)")
+            
+            # 【關鍵修正】計算最大成交量，並強制轉為一般 int，避免 JSON 錯誤
+            max_vol = 10000
+            if '成交量(張)' in df.columns and not df.empty:
+                max_vol = int(df['成交量(張)'].max()) # <--- 這裡加了 int()
             
             # 設定表格顯示格式
             st.dataframe(
@@ -67,7 +70,7 @@ if os.path.exists(csv_file):
                         "成交量 (張)",
                         format="%d",
                         min_value=0,
-                        max_value=df['成交量(張)'].max() if '成交量(張)' in df.columns else 10000,
+                        max_value=max_vol, # 使用修正後的變數
                     ),
                 }
             )
@@ -78,8 +81,7 @@ if os.path.exists(csv_file):
             
     except Exception as e:
         st.error(f"❌ 讀取資料發生錯誤: {e}")
-        st.code(str(e)) # 顯示詳細錯誤代碼方便除錯
+        # st.code(str(e)) 
 else:
     st.info("⏳ 尚未產生掃描結果。")
     st.write("請等待下午自動排程執行 (約 14:30)，或前往 GitHub Actions 手動觸發。")
-
