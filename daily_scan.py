@@ -3,26 +3,10 @@ import yfinance as yf
 import pandas as pd
 import datetime
 import time
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
-# --- 🎯 1. 全域連線設定 (新增 Retry 機制) ---
-# 設定重試策略：總共重試 3 次，針對 429, 500, 502, 503, 504 錯誤碼
-retry_strategy = Retry(
-    total=3,
-    backoff_factor=1, # 每次重試間隔會依序拉長 (1s, 2s, 4s...)
-    status_forcelist=[429, 500, 502, 503, 504],
-    allowed_methods=["HEAD", "GET", "OPTIONS"]
-)
-# 將重試策略應用到連線
-adapter = HTTPAdapter(max_retries=retry_strategy)
-http_session = requests.Session()
-http_session.mount("https://", adapter)
-http_session.mount("http://", adapter)
-
-# --- 2. 獲取股票代碼清單 ---
+# --- 1. 獲取股票代碼清單 ---
 def get_all_tickers():
+    # 這裡的邏輯是正確的，確保抓取所有上市櫃股票
     codes = twstock.codes
     valid_tickers = []
     
@@ -33,12 +17,12 @@ def get_all_tickers():
             
     return valid_tickers
 
-# --- 3. 核心掃描函數 ---
+# --- 2. 核心掃描函數 ---
 def scan_market():
     tickers = get_all_tickers()
     breakout_list = []
     
-    # 設定台灣時間 (GitHub 主機是 UTC，所以要 +8)
+    # 設定台灣時間
     tz = datetime.timezone(datetime.timedelta(hours=8))
     taiwan_now = datetime.datetime.now(tz)
     today_str = taiwan_now.strftime('%Y-%m-%d')
@@ -50,15 +34,17 @@ def scan_market():
     
     for i, code in enumerate(tickers):
         try:
-            # ⭐ 核心修正：將 Session 傳給 yfinance
-            stock = yf.Ticker(code, session=http_session) 
+            # ⭐ 關鍵修正：回歸最簡單的 yfinance 呼叫，移除 session
+            stock = yf.Ticker(code) 
             df = stock.history(period="3mo", auto_adjust=True, prepost=False)
             
+            # --- 檢查資料是否空值或不足 ---
             if df.empty or len(df) < 20: 
+                # 這裡可能包含已下市或資料不足20天的股票
                 count_fail += 1
                 continue
 
-            # --- 假日/沒開盤偵測 ---
+            # --- 假日/沒開盤偵測 (防止報舊牌) ---
             last_candle_date = df.index[-1].strftime('%Y-%m-%d')
             
             if last_candle_date != today_str:
@@ -70,7 +56,7 @@ def scan_market():
             
             wrong_date_count = 0 
 
-            # --- 4. 計算與判斷 (邏輯保持不變) ---
+            # --- 3. 均線計算與判斷 (邏輯正確) ---
             df['MA5'] = df['Close'].rolling(window=5).mean()
             df['MA10'] = df['Close'].rolling(window=10).mean()
             df['MA20'] = df['Close'].rolling(window=20).mean()
@@ -125,20 +111,19 @@ def scan_market():
                 })
             
         except Exception as e:
-            # print(f"Error: {code} - {e}")
+            # print(f"Error: {code} - {e}") # 這裡印出來會知道詳細錯誤，但會佔用log空間
             count_fail += 1
             continue
         
-        # 關鍵修正：連線重試已經處理了大部分問題，這裡只需要基本的延遲
-        time.sleep(0.5) # 由於有 Retry 機制，延遲可以稍微調降
+        # ⭐ 關鍵修正：延遲時間拉長到 1.5 秒
+        time.sleep(1.5) 
         
         if (i + 1) % 100 == 0:
             print(f"--- 進度: 已掃描 {i + 1} / {len(tickers)} 檔 (目前發現 {len(breakout_list)} 檔) ---")
 
-    # --- 5. 存檔 ---
+    # --- 4. 存檔 ---
     df_result = pd.DataFrame(breakout_list)
     
-    # 確保欄位順序並存檔 (略過細節)
     if not df_result.empty:
         df_result = df_result.sort_values(by="乖離率(%)", ascending=True)
         cols = ["資料日期", "代號", "名稱", "觸發條件", "收盤價", "MA5", "MA10", "MA20", "乖離率(%)", "成交量(張)"]
