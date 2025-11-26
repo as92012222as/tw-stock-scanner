@@ -17,7 +17,7 @@ def get_all_tickers():
             valid_tickers.append(f"{code}.TW")
             
     # 為了測試，您可以先只跑前 500 檔，確認有資料後再拿掉 [:500]
-    # return valid_tickers[:500] 
+    # return valid_tickers[:100] 
     return valid_tickers
 
 # --- 2. 核心掃描函數 ---
@@ -64,7 +64,7 @@ def scan_market():
             
             # 條件 A: 成交量 > 500 張 (500,000 股)
             # 注意：Yahoo 有時成交量會有誤差，設 300 張 (300,000) 比較保險，您原本設 500 張也可以
-            cond_volume = today['Volume'] > 300000 
+            cond_volume = today['Volume'] > 1000000 
             
             # 條件 B1: 剛站上 MA5 (且在 MA10, MA20 之上)
             is_c1 = (today['Close'] > today['MA5']) & \
@@ -142,3 +142,4 @@ def scan_market():
 
 if __name__ == "__main__":
     scan_market()
+
