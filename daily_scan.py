@@ -17,7 +17,7 @@ def get_all_tickers():
             valid_tickers.append(f"{code}.TW")
             
     # 為了測試，您可以先只跑前 500 檔，確認有資料後再拿掉 [:500]
-    # return valid_tickers[:100] 
+    # return valid_tickers 
     return valid_tickers
 
 # --- 2. 核心掃描函數 ---
@@ -142,4 +142,5 @@ def scan_market():
 
 if __name__ == "__main__":
     scan_market()
+
 
