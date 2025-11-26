@@ -21,27 +21,35 @@ def scan_market():
     tickers = get_all_tickers()
     breakout_list = []
     
-    # ⭐ 修正：設定台灣時間，用於判斷是否為交易日
+    # ⭐ 設置台灣時間及日期範圍
     tz = datetime.timezone(datetime.timedelta(hours=8))
     taiwan_now = datetime.datetime.now(tz)
     today_str = taiwan_now.strftime('%Y-%m-%d')
     
+    # 設定抓取資料的日期範圍 (3個月前到今天)，使用 yf.download 必須明確指定日期
+    start_date = (taiwan_now - datetime.timedelta(days=90)).strftime('%Y-%m-%d')
+    end_date = today_str 
+    
     print(f"🚀 開始掃描全市場 {len(tickers)} 檔股票... 台灣今天日期: {today_str}")
     print(f"⏰ 執行時間: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-    # 統計用
     count_fail = 0
-    wrong_date_count = 0 # 用於假日偵測
+    wrong_date_count = 0
     
     for i, code in enumerate(tickers):
         try:
-            stock = yf.Ticker(code)
-            # 抓取最近 3 個月資料
-            df = stock.history(period="3mo")
+            # ⭐ 關鍵修正：改用 yf.download 函數，更穩定且明確指定日期範圍
+            df = yf.download(
+                code,
+                start=start_date,
+                end=end_date,
+                interval="1d",
+                progress=False # 關閉進度條輸出，讓 Log 更乾淨
+            )
             
             # --- 檢查資料是否空值或不足 ---
             if df.empty:
-                # if i < 5: print(f"⚠️ {code}: 抓取失敗 (資料為空)，可能被 API 限制") # 註解掉避免Log過長
+                # 這裡可能包含已下市或資料不存在的股票 (如您 log 所示的 6221.TW)
                 count_fail += 1
                 continue
 
@@ -54,24 +62,22 @@ def scan_market():
             yesterday = df.iloc[-2]
             
             # 取得資料日期
-            last_candle_date = today.name.strftime('%Y-%m-%d') # ⭐ 使用統一變數 last_candle_date
+            last_candle_date = today.name.strftime('%Y-%m-%d') 
 
-            # --- ⭐ 關鍵修正：假日/沒開盤偵測 ---
+            # --- 假日/沒開盤偵測 ---
             if last_candle_date != today_str:
                 wrong_date_count += 1
                 if wrong_date_count > 10:
                     print(f"😴 偵測到今日({today_str})似乎是假日或未開盤 (資料停在 {last_candle_date})，停止掃描。")
-                    break # 強制中止整個流程
-                continue # 跳過本檔股票
+                    break 
+                continue 
             
-            wrong_date_count = 0 # 只要有抓到一檔今天的資料，就重置計數器
+            wrong_date_count = 0 
 
-            # --- 3. 計算均線 ---
+            # --- 3. 均線計算與判斷 (邏輯保持不變) ---
             df['MA5'] = df['Close'].rolling(window=5).mean()
             df['MA10'] = df['Close'].rolling(window=10).mean()
             df['MA20'] = df['Close'].rolling(window=20).mean()
-            
-            # --- 4. 判斷篩選條件 ---
             
             # 成交量條件 (您的設定：1000張)
             cond_volume = today['Volume'] > 1000000 
@@ -102,9 +108,7 @@ def scan_market():
                 
                 # 取得中文名稱
                 stock_id = code.replace(".TW", "")
-                stock_name = stock_id
-                if stock_id in twstock.codes:
-                    stock_name = twstock.codes[stock_id].name
+                stock_name = twstock.codes.get(stock_id, {'name': stock_id})['name']
 
                 print(f"🔥 發現 [{last_candle_date}]: {stock_id} {stock_name} -> {final_trigger}")
                 
@@ -122,30 +126,28 @@ def scan_market():
                 })
             
         except Exception as e:
-            # print(f"Error: {code} - {e}")
+            # 這裡會捕捉到所有連線、格式、或資料讀取失敗
             count_fail += 1
             continue
         
-        # --- ⭐ 關鍵修正：延遲時間拉長到 1.5 秒 ---
+        # --- 延遲時間拉長到 1.5 秒 ---
         time.sleep(1.5) 
         
         # 進度條
         if (i + 1) % 100 == 0:
             print(f"--- 進度: 已掃描 {i + 1} / {len(tickers)} 檔 (目前發現 {len(breakout_list)} 檔) ---")
 
-    # --- 5. 存檔 ---
+    # --- 4. 存檔 ---
     df_result = pd.DataFrame(breakout_list)
     
     if not df_result.empty:
-        # 排序：優先顯示乖離率小的 (剛起漲)
         df_result = df_result.sort_values(by="乖離率(%)", ascending=True)
-        # 調整欄位順序
         cols = ["資料日期", "代號", "名稱", "觸發條件", "收盤價", "MA5", "MA10", "MA20", "乖離率(%)", "成交量(張)"]
         df_result = df_result[cols]
     else:
-        # 建立空表，防止網頁報錯
-        df_result = pd.DataFrame(columns=["資料日期", "代號", "名稱", "觸發條件", "收盤價", "MA5", "MA10", "MA20", "乖離率(%)", "成交量(張)"])
-    
+        cols = ["資料日期", "代號", "名稱", "觸發條件", "收盤價", "MA5", "MA10", "MA20", "乖離率(%)", "成交量(張)"]
+        df_result = pd.DataFrame(columns=cols)
+
     df_result.to_csv("result.csv", index=False, encoding="utf-8-sig")
     print(f"🏁 掃描結束。總掃描: {len(tickers)} | 符合條件: {len(df_result)} | 失敗/跳過: {count_fail}")
 
