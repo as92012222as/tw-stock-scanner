@@ -1,7 +1,6 @@
 streamlit
+plotly
+pandas
 yfinance
 twstock
 lxml
-streamlit
-pandas
-plotly
