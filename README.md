@@ -20,6 +20,7 @@ tw-stock-scanner/
 ├── daily_scan.py        # 每日執行掃描與資料處理腳本
 ├── requirements.txt     # Python 依賴套件清單
 └── result.csv           # 每日掃描輸出的結果清單
+
 🚀 本地端安裝與執行
 若你想在自己的電腦上運行此專案，請確保已安裝 Python 3.8 或以上版本。
 
