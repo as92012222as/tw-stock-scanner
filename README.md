@@ -25,28 +25,38 @@
 
 ### 1. 複製儲存庫
 ```bash
-git clone [https://github.com/as92012222as/tw-stock-scanner.git](https://github.com/as92012222as/tw-stock-scanner.git)
+git clone https://github.com/as92012222as/tw-stock-scanner.git
 cd tw-stock-scanner
+```
 
-2. 安裝依賴套件
+### 2. 安裝依賴套件
 建議使用虛擬環境 (Virtual Environment) 進行安裝：
+```bash
 pip install -r requirements.txt
+```
 
-3. 執行每日掃描
-手動執行盤後掃描腳本，這將會抓取最新股市資料並更新 result.csv：
+### 3. 執行每日掃描
+手動執行盤後掃描腳本，這將會抓取最新股市資料並更新 `result.csv`：
+```bash
 python daily_scan.py
+```
 
-4. 啟動應用程式
+### 4. 啟動應用程式
 若要開啟檢視介面或服務，請執行：
+```bash
 python app.py
+```
 
-⚙️ 自動化 (GitHub Actions)
-本專案已配置 GitHub Actions。系統會根據 .github/workflows 內的 cron 設定，在台灣時間的每個交易日盤後自動觸發 daily_scan.py，並將最新篩選出的股票名單 commit 更新至 result.csv。
+## ⚙️ 自動化 (GitHub Actions)
 
-查看最新結果：直接點擊本儲存庫的 result.csv 即可查看今日剛站上月線的股票清單。
+本專案已配置 GitHub Actions。系統會根據 `.github/workflows` 內的 cron 設定，在台灣時間的每個交易日盤後自動觸發 `daily_scan.py`，並將最新篩選出的股票名單 commit 更新至 `result.csv`。
 
-⚠️ 免責聲明
-本專案提供的程式碼與掃描結果 僅供學術研究與程式開發參考，不構成任何投資建議。股市有風險，投資人應自行評估風險並自負盈虧。
+* **查看最新結果**：直接點擊本儲存庫的 [`result.csv`](./result.csv) 即可查看今日剛站上月線的股票清單。
 
-🤝 貢獻與問題回報
+## ⚠️ 免責聲明
+
+本專案提供的程式碼與掃描結果 **僅供學術研究與程式開發參考，不構成任何投資建議**。股市有風險，投資人應自行評估風險並自負盈虧。
+
+## 🤝 貢獻與問題回報
+
 歡迎發起 Issue 討論或是提交 Pull Request 來讓這個專案變得更好！
