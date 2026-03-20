@@ -77,4 +77,3 @@ def main():
     # Load Data via src.dashboard helper function
 
     df, mod_time = load_data(RESULT_CSV_FILE)
-
