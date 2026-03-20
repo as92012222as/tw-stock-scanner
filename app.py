@@ -1,89 +1,205 @@
 import streamlit as st
+
 import pandas as pd
-import yfinance as yf  # 用於抓取新聞
+
+
+
 from config import RESULT_CSV_FILE
+
 from src.dashboard import inject_custom_css, load_data, render_metrics_dashboard, render_strategy_chart
 
-# --- 新增功能函式：抓取股票新聞與簡單分析 ---
-def render_news_section(symbol, name):
-    st.subheader(f"🔍 {name} ({symbol}) 近期動態分析")
-    
-    try:
-        # 確保代號是字串
-        str_symbol = str(symbol)
-        
-        # 1. 先嘗試以上市 (.TW) 搜尋
-        yf_symbol = f"{str_symbol}.TW"
-        ticker = yf.Ticker(yf_symbol)
-        news = ticker.news
-        
-        # 2. 如果沒抓到新聞，可能是上櫃股票，改用 (.TWO) 再次嘗試
-        if not news:
-            yf_symbol = f"{str_symbol}.TWO"
-            ticker = yf.Ticker(yf_symbol)
-            news = ticker.news
-        
-        # 如果還是沒有新聞，就提早結束
-        if not news:
-            st.info("目前暫無相關新聞。")
-            return
 
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.success("🟢 潛在利多 (Positive / News)")
-            # 示範顯示前 3 則新聞，並使用 .get() 避免欄位遺失報錯
-            for n in news[:3]:
-                title = n.get('title', '無標題新聞')
-                link = n.get('link', '#')
-                publisher = n.get('publisher', '未知來源')
-                st.markdown(f"**[{title}]({link})**")
-                st.caption(f"來源: {publisher}")
 
-        with col2:
-            st.error("🔴 風險注意 (Risks / Negative)")
-            st.warning("提醒：請留意近期成交量變化與乖離率過高修正風險。")
-            st.write("- 市場情緒波動風險")
-            st.write("- 產業景氣循環壓力")
+# --- 1. Page Configuration ---
 
-    except Exception as e:
-        st.error(f"無法取得新聞資訊: {e}")
+st.set_page_config(
 
-# --- 2. Main Streamlit Controller ---
+    page_title="台股強勢突破偵測儀",
+
+    layout="wide",
+
+    page_icon="📈",
+
+    initial_sidebar_state="expanded"
+
+)
+
+
+
+# --- 2. Inject CSS ---
+
+inject_custom_css()
+
+
+
+# --- 3. Main Streamlit Controller ---
+
 def main():
-    # ... (前面的 Sidebar 與數據載入保持不變，為保持簡潔先省略) ...
-    # 假設這裡已經執行了 df, mod_time = load_data(RESULT_CSV_FILE)
-    
-    # 為了測試方便，我們加上這行避免 DataFrame 不存在時報錯
-    if 'df' not in locals() or df is None:
-        st.warning("請確保已經正確載入資料 (df)。")
-        return
 
-    # (中略：標題與指標渲染)
-    # render_metrics_dashboard(df) # 假設這行存在
-    st.markdown("---")
+    # Sidebar: Control Panel
 
-    if not df.empty:
-        # --- 優化區：新增選股後的詳細分析 ---
-        st.markdown("### 🎯 個股深度診斷")
-        
-        # 將 DataFrame 中的代號統一轉為字串，避免格式比對錯誤
-        df['代號'] = df['代號'].astype(str)
-        
-        selected_stock = st.selectbox(
-            "選擇一支股票查看利多利空分析：",
-            options=df['代號'].tolist(),
-            format_func=lambda x: f"{x} {df[df['代號']==x]['名稱'].values[0]}"
-        )
-        
-        if selected_stock:
-            stock_name = df[df['代號']==selected_stock]['名稱'].values[0]
-            render_news_section(selected_stock, stock_name)
-        
+    with st.sidebar:
+
+        st.title("⚙️ 控制面板 (Control Panel)")
+
         st.markdown("---")
 
-        # --- 以下為你原本的 Filters 與 Tab 邏輯 ---
-        # ... 繼續接上你後續的程式碼 ...
+        
 
-if __name__ == "__main__":
-    main()
+        # Refresh Button
+
+        if st.button("🔄 重新掃描 / 讀取 (Refresh)", use_container_width=True):
+
+            st.rerun()
+
+            
+
+        st.markdown("### 關於策略 (Strategy Logic)")
+
+        st.info(
+
+            """
+
+            **多重均線共振突破**
+
+            \n偵測股價同時站上 MA5, MA10, MA20 
+
+            且均線呈現多頭排列之強勢股。
+
+            """
+
+        )
+
+        st.caption("資料來源: GitHub Actions 自動運算")
+
+
+
+    # Load Data via src.dashboard helper function
+
+    df, mod_time = load_data(RESULT_CSV_FILE)
+
+
+
+    # Page Header
+
+    st.markdown('<div class="main-title">📈 台股強勢突破選股雷達</div>', unsafe_allow_html=True)
+
+    if mod_time:
+
+        st.markdown(f'<div class="sub-title">最後更新時間 (Last Updated)：{mod_time}</div>', unsafe_allow_html=True)
+
+    else:
+
+        st.markdown('<div class="sub-title">等待資料生成中... (Awaiting Data...)</div>', unsafe_allow_html=True)
+
+
+
+    # Render Content
+
+    if df is not None and not df.empty:
+
+        
+
+        # 1. Dashboard Metrics
+
+        render_metrics_dashboard(df)
+
+        st.markdown("---")
+
+
+
+        # 2. Filters
+
+        col_filter_1, col_filter_2 = st.columns([1, 2])
+
+        
+
+        with col_filter_1:
+
+            all_strategies = ['全部顯示'] + sorted(df['觸發條件'].astype(str).unique().tolist())
+
+            selected_strategy = st.selectbox("📌 選擇觸發訊號 (Symbol Filter)", all_strategies)
+
+        
+
+        with col_filter_2:
+
+            search_term = st.text_input("🔍 搜尋代號或名稱 (Search Component)", placeholder="輸入 2330 或 台積電...")
+
+
+
+        # Filtering Logic
+
+        filtered_df = df.copy()
+
+        if selected_strategy != '全部顯示':
+
+            filtered_df = filtered_df[filtered_df['觸發條件'] == selected_strategy]
+
+        
+
+        if search_term:
+
+            filtered_df = filtered_df[
+
+                filtered_df['代號'].str.contains(search_term) | 
+
+                filtered_df['名稱'].str.contains(search_term)
+
+            ]
+
+
+
+        # 3. Chart and Lists (If data exists post-filter)
+
+        if not filtered_df.empty:
+
+            tab1, tab2 = st.tabs(["📋 詳細清單 (Details List)", "📊 訊號分佈分析 (Distribution Chart)"])
+
+
+
+            with tab1:
+
+                # Setup metrics configs for data grid
+
+                max_vol = int(df['成交量(張)'].max()) if '成交量(張)' in df.columns else 10000
+
+                st.dataframe(
+
+                    filtered_df,
+
+                    use_container_width=True,
+
+                    hide_index=True,
+
+                    column_order=[
+
+                        "代號", "名稱", "收盤價", "乖離率(%)", "成交量(張)", 
+
+                        "觸發條件", "連結", "MA5", "MA10", "MA20", "資料日期"
+
+                    ],
+
+                    column_config={
+
+                        "連結": st.column_config.LinkColumn(
+
+                            "K線圖", display_text="Yahoo股市", help="點擊前往 Yahoo 股市查看詳情"
+
+                        ),
+
+                        "代號": st.column_config.TextColumn("代號"),
+
+                        "名稱": st.column_config.TextColumn("名稱", width="small"),
+
+                        "收盤價": st.column_config.NumberColumn("收盤價", format="$%.2f", width="small"),
+
+                        "乖離率(%)": st.column_config.NumberColumn("乖離率(%)", format="%.2f %%", help="正乖離過大需注意修正風險"),
+
+                        "成交量(張)": st.column_config.ProgressColumn("成交量", format="%d 張", min_value=0, max_value=max_vol),
+
+                        "觸發條件": st.column_config.TextColumn("🚀 訊號類型"),
+
+                    }
+
+                )
