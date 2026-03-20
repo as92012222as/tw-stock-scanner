@@ -63,7 +63,72 @@ def main():
         with col_filter_2:
             search_term = st.text_input("🔍 搜尋代號或名稱 (Search Component)", placeholder="輸入 2330 或 台積電...")
 
-        # Filtering Logic
+        # --- 這裡修復了被截斷的 Filtering Logic ---
         filtered_df = df.copy()
+        
+        # 觸發條件篩選
         if selected_strategy != '全部顯示':
             filtered_df = filtered_df[filtered_df['觸發條件'] == selected_strategy]
+        
+        # 關鍵字搜尋篩選
+        if search_term:
+            filtered_df = filtered_df[
+                filtered_df['代號'].astype(str).str.contains(search_term) | 
+                filtered_df['名稱'].astype(str).str.contains(search_term)
+            ]
+
+        # 3. Chart and Lists (If data exists post-filter)
+        if not filtered_df.empty:
+            tab1, tab2 = st.tabs(["📋 詳細清單 (Details List)", "📊 訊號分佈分析 (Distribution Chart)"])
+
+            with tab1:
+                # Setup metrics configs for data grid
+                max_vol = int(df['成交量(張)'].max()) if '成交量(張)' in df.columns else 10000
+                st.dataframe(
+                    filtered_df,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_order=[
+                        "代號", "名稱", "收盤價", "乖離率(%)", "成交量(張)", 
+                        "觸發條件", "連結", "MA5", "MA10", "MA20", "資料日期"
+                    ],
+                    column_config={
+                        "連結": st.column_config.LinkColumn(
+                            "K線圖", display_text="Yahoo股市", help="點擊前往 Yahoo 股市查看詳情"
+                        ),
+                        "代號": st.column_config.TextColumn("代號"),
+                        "名稱": st.column_config.TextColumn("名稱", width="small"),
+                        "收盤價": st.column_config.NumberColumn("收盤價", format="$%.2f", width="small"),
+                        "乖離率(%)": st.column_config.NumberColumn("乖離率(%)", format="%.2f %%", help="正乖離過大需注意修正風險"),
+                        "成交量(張)": st.column_config.ProgressColumn("成交量", format="%d 張", min_value=0, max_value=max_vol),
+                        "觸發條件": st.column_config.TextColumn("🚀 訊號類型"),
+                    }
+                )
+            
+            with tab2:
+                # 繪製圖表
+                render_strategy_chart(filtered_df)
+
+        else:
+            st.warning("⚠️ 篩選後無符合條件的股票。 (0 Results after filter.)")
+
+    else:
+        # Empty State
+        st.container()
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.image("https://cdn-icons-png.flaticon.com/512/6133/6133066.png", width=150)
+            st.info("目前沒有資料，或資料庫為空。 (Database missing or empty)")
+            st.markdown("""
+                **可能原因 (Possible causes):**
+                1. 今日盤勢尚未結束，或 Actions 尚未執行。
+                2. 今日無股票符合「均線突破」條件。
+                3. `result.csv` 檔案不存在。
+            """)
+            if st.button("嘗試手動重新讀取 (Retry Refresh)"):
+                st.rerun()
+
+# --- 4. 程式執行進入點 ---
+if __name__ == "__main__":
+    main()
+    
