@@ -4,3 +4,4 @@ pandas
 yfinance
 twstock
 lxml
+pip install yfinance
